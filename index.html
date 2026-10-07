@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>戰鬥陀螺 X 抽籤器</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent-color: #38bdf8;
+      --accent-gold: #f59e0b;
+      --text-color: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent-color);
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    /* 陀螺卡片展示區 */
+    .combo-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.5rem;
+      max-width: 900px;
+      width: 100%;
+      margin-bottom: 2rem;
+    }
+
+    .part-card {
+      position: relative;
+      background: var(--card-bg);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      width: 260px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      transition: all 0.4s ease;
+    }
+
+    .part-card.rolling {
+      border-color: var(--accent-color);
+      transform: translateY(-3px);
+    }
+
+    /* === T0 特效樣式 === */
+    .part-card.t0-effect {
+      border-color: #fbbf24 !important;
+      animation: t0Glow 1.5s infinite alternate ease-in-out, t0Pop 0.4s ease-out;
+    }
+
+    @keyframes t0Glow {
+      0% {
+        box-shadow: 0 0 15px rgba(251, 191, 36, 0.4), inset 0 0 10px rgba(251, 191, 36, 0.2);
+      }
+      100% {
+        box-shadow: 0 0 30px rgba(251, 191, 36, 0.9), inset 0 0 20px rgba(251, 191, 36, 0.4);
+      }
+    }
+
+    @keyframes t0Pop {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    /* T0 標籤 */
+    .t0-badge {
+      display: none;
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 900;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5);
+      border: 2px solid #fff;
+      animation: badgeBounce 0.5s ease-out;
+    }
+
+    .part-card.t0-effect .t0-badge {
+      display: block;
+    }
+
+    @keyframes badgeBounce {
+      0% { transform: scale(0); }
+      80% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .part-tag {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      background: rgba(245, 158, 11, 0.1);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+    }
+
+    .img-box {
+      width: 160px;
+      height: 160px;
+      background-color: #0f172a;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      border: 1px solid #334155;
+    }
+
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .part-name {
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-align: center;
+      min-height: 2.8em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    /* 單項抽籤按鈕 */
+    .btn-part-draw {
+      background: #0284c7;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: bold;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-part-draw:hover {
+      background: #0369a1;
+    }
+
+    /* 底部全抽取按鈕區域 */
+    .action-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-all-draw {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      font-size: 1.25rem;
+      font-weight: bold;
+      padding: 0.9rem 2.8rem;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.39);
+      transition: all 0.2s ease;
+    }
+
+    .btn-all-draw:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.55);
+    }
+
+    button:disabled {
+      background: #64748b !important;
+      cursor: not-allowed !important;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .result-summary {
+      font-size: 1.2rem;
+      color: var(--accent-gold);
+      font-weight: bold;
+      min-height: 1.5em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>戰鬥陀螺 X 抽籤器</h1>
+  <p class="subtitle">可獨立抽取單一零件，也可一次隨機生成完整陀螺！</p>
+
+  <div class="combo-container">
+    <!-- 上蓋 Card -->
+    <div class="part-card" id="blade-card">
+      <div class="t0-badge">🔥 T0 強力零件</div>
+      <span class="part-tag">上蓋 (Blade)</span>
+      <div class="img-box">
+        <img id="blade-img" src="images/Blade/鮫鯊狂鱗.jpeg" alt="Blade">
+      </div>
+      <div class="part-name" id="blade-name">請抽取上蓋</div>
+      <button class="btn-part-draw" id="blade-btn" onclick="drawSingle('blade')">🎲 抽上蓋</button>
+    </div>
+
+    <!-- 固鎖 Card -->
+    <div class="part-card" id="ratchet-card">
+      <div class="t0-badge">🔥 T0 強力零件</div>
+      <span class="part-tag">固鎖 (Ratchet)</span>
+      <div class="img-box">
+        <img id="ratchet-img" src="images/Ratchet/3-60.jpeg" alt="Ratchet">
+      </div>
+      <div class="part-name" id="ratchet-name">請抽取固鎖</div>
+      <button class="btn-part-draw" id="ratchet-btn" onclick="drawSingle('ratchet')">🎲 抽固鎖</button>
+    </div>
+
+    <!-- 軸心 Card -->
+    <div class="part-card" id="bit-card">
+      <div class="t0-badge">🔥 T0 強力零件</div>
+      <span class="part-tag">軸心 (Bit)</span>
+      <div class="img-box">
+        <img id="bit-img" src="images/Bit/R.jpeg" alt="Bit">
+      </div>
+      <div class="part-name" id="bit-name">請抽取軸心</div>
+      <button class="btn-part-draw" id="bit-btn" onclick="drawSingle('bit')">🎲 抽軸心</button>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-all-draw" id="all-btn" onclick="drawAll()">⚡ 一鍵全套抽取</button>
+    <div class="result-summary" id="result-text"></div>
+  </div>
+
+  <script>
+    // 零件清單（已標註 T0 零件）
+    const partsData = {
+      blade: [
+        { name: "天馬爆擊A", img: "images/Blade/天馬爆擊A.jpeg" },
+        { name: "天國日輪", img: "images/Blade/天國日輪.jpeg" },
+        { name: "天蠍長矛", img: "images/Blade/天蠍長矛.jpeg" },
+        { name: "幻神護甲", img: "images/Blade/幻神護甲.jpeg" },
+        { name: "王蛇鞭尾", img: "images/Blade/王蛇鞭尾.jpeg" },
+        { name: "古屍詛咒", img: "images/Blade/古屍詛咒.jpeg" },
+        { name: "巨岩雄獅", img: "images/Blade/巨岩雄獅.jpeg" },
+        { name: "巨鯨怒濤", img: "images/Blade/巨鯨怒濤.jpeg" },
+        { name: "巨鱷碾壓Q", img: "images/Blade/巨鱷碾壓Q.jpeg" },
+        { name: "玄冥戰甲", img: "images/Blade/玄冥戰甲.jpeg" },
+        { name: "忍者闇影", img: "images/Blade/忍者闇影.jpeg" },
+        { name: "邪神狂怒FE", img: "images/Blade/邪神狂怒FE.jpeg" },
+        { name: "武士魂斬", img: "images/Blade/武士魂斬.jpeg" },
+        { name: "空力天馬", img: "images/Blade/空力天馬.jpeg", isT0: true },
+        { name: "帝王威能H", img: "images/Blade/帝王威能H.jpeg" },
+        { name: "幽靈元魂", img: "images/Blade/幽靈元魂.jpeg" },
+        { name: "英仙幽冥B", img: "images/Blade/英仙幽冥B.jpeg" },
+        { name: "迪佳狂怒FT", img: "images/Blade/迪佳狂怒FT.jpeg" },
+        { name: "飛龍旋翼", img: "images/Blade/飛龍旋翼.jpeg" },
+        { name: "飛龍颶風", img: "images/Blade/飛龍颶風.jpeg" },
+        { name: "時鐘幻象", img: "images/Blade/時鐘幻象.jpeg" },
+        { name: "海怪蠕動S", img: "images/Blade/海怪蠕動S.jpeg" },
+        { name: "烈焰飛鳳", img: "images/Blade/烈焰飛鳳.jpeg" },
+        { name: "神力聖劍", img: "images/Blade/神力聖劍.jpeg" },
+        { name: "堅甲戰龜", img: "images/Blade/堅甲戰龜.jpeg" },
+        { name: "猛獁獠牙", img: "images/Blade/猛獁獠牙.jpeg" },
+        { name: "惡魔幽冥", img: "images/Blade/惡魔幽冥.jpeg" },
+        { name: "惡魔紅鐮", img: "images/Blade/惡魔紅鐮.jpeg" },
+        { name: "惡魔重捶", img: "images/Blade/惡魔重捶.jpeg" },
+        { name: "惡魔獵魂T", img: "images/Blade/惡魔獵魂T.jpeg" },
+        { name: "惡魔鎖鏈", img: "images/Blade/惡魔鎖鏈.jpeg" },
+        { name: "焰神滅世D", img: "images/Blade/焰神滅世D.jpeg" },
+        { name: "皓戰猛虎", img: "images/Blade/皓戰猛虎.jpeg" },
+        { name: "腕龍鞭打W", img: "images/Blade/腕龍鞭打W.jpeg" },
+        { name: "雄鹿鹿角 B", img: "images/Blade/雄鹿鹿角 B.jpeg" },
+        { name: "雄獅獵爪", img: "images/Blade/雄獅獵爪.jpeg" },
+        { name: "雄獅巔峰", img: "images/Blade/雄獅巔峰.jpeg" },
+        { name: "黃蜂堡壘 R", img: "images/Blade/黃蜂堡壘 R.jpeg" },
+        { name: "黑金蒼龍勇氣 S", img: "images/Blade/黑金蒼龍勇氣 S.jpeg" },
+        { name: "極狐九尾J", img: "images/Blade/極狐九尾J.jpeg" },
+        { name: "隕星龍騎士", img: "images/Blade/隕星龍騎士.jpeg" },
+        { name: "雷霆天龍", img: "images/Blade/雷霆天龍.jpeg" },
+        { name: "榮耀武神", img: "images/Blade/榮耀武神.jpeg", isT0: true },
+        { name: "蒼穹龍神", img: "images/Blade/蒼穹龍神.jpeg" },
+        { name: "蒼穹龍騎士", img: "images/Blade/蒼穹龍騎士.jpeg" },
+        { name: "蒼龍利刃", img: "images/Blade/蒼龍利刃.jpeg" },
+        { name: "蒼龍勇氣 S", img: "images/Blade/蒼龍勇氣 S.jpeg" },
+        { name: "蒼龍突襲", img: "images/Blade/蒼龍突襲.jpeg" },
+        { name: "蒼龍神劍", img: "images/Blade/蒼龍神劍.jpeg" },
+        { name: "蒼龍暴刃", img: "images/Blade/蒼龍暴刃.jpeg" },
+        { name: "赫燃天鳳", img: "images/Blade/赫燃天鳳.jpeg" },
+        { name: "銀牙烈虎", img: "images/Blade/銀牙烈虎.jpeg" },
+        { name: "銀狼狩獵F", img: "images/Blade/銀狼狩獵F.jpeg" },
+        { name: "鳳凰尾翼", img: "images/Blade/鳳凰尾翼.jpeg" },
+        { name: "鳳凰飛翼", img: "images/Blade/鳳凰飛翼.jpeg" },
+        { name: "鳳凰閃焰Z", img: "images/Blade/鳳凰閃焰Z.jpeg" },
+        { name: "暴風天馬", img: "images/Blade/暴風天馬.jpeg" },
+        { name: "暴風巨神", img: "images/Blade/暴風巨神.jpeg" },
+        { name: "暴龍咆嘯", img: "images/Blade/暴龍咆嘯.jpeg" },
+        { name: "暴龍霸擊", img: "images/Blade/暴龍霸擊.jpeg" },
+        { name: "衝擊龍神", img: "images/Blade/衝擊龍神.jpeg" },
+        { name: "戰羊阻截", img: "images/Blade/戰羊阻截.jpeg" },
+        { name: "戰神伏特S", img: "images/Blade/戰神伏特S.jpeg" },
+        { name: "戰犀號角", img: "images/Blade/戰犀號角.jpeg" },
+        { name: "獨角刺心", img: "images/Blade/獨角刺心.jpeg" },
+        { name: "獨角極變O", img: "images/Blade/獨角極變O.jpeg" },
+        { name: "龍王閃擊K", img: "images/Blade/龍王閃擊K.jpeg" },
+        { name: "龍神勇氣 G", img: "images/Blade/龍神勇氣 G.jpeg" },
+        { name: "龍騎士S", img: "images/Blade/龍騎士S.jpeg" },
+        { name: "翼龍神翼", img: "images/Blade/翼龍神翼.jpeg" },
+        { name: "鮫鯊撕裂", img: "images/Blade/鮫鯊撕裂.jpeg" },
+        { name: "鮫鯊鋒鰭", img: "images/Blade/鮫鯊鋒鰭.jpeg" },
+        { name: "雙輝銀狼", img: "images/Blade/雙輝銀狼.jpeg" },
+        { name: "騎士長槍", img: "images/Blade/騎士長槍.jpeg" },
+        { name: "騎士重盾", img: "images/Blade/騎士重盾.jpeg" },
+        { name: "騎士堡壘GV", img: "images/Blade/騎士堡壘GV.jpeg" },
+        { name: "騎士圓甲", img: "images/Blade/騎士圓甲.jpeg" },
+        { name: "護城龍神", img: "images/Blade/護城龍神.jpeg" },
+        { name: "魔犬烈焰W", img: "images/Blade/魔犬烈焰W.jpeg" },
+        { name: "魔像奇岩", img: "images/Blade/魔像奇岩.jpeg" },
+        { name: "魔導幻箭", img: "images/Blade/魔導幻箭.jpeg" },
+        { name: "魔導至尊R", img: "images/Blade/魔導至尊R.jpeg" },
+        { name: "魔導神杖", img: "images/Blade/魔導神杖.jpeg", isT0: true },
+        { name: "八岐大蛇", img: "images/Blade/八岐大蛇.jpeg" },
+        { name: "三角強襲", img: "images/Blade/三角強襲.jpeg" },
+        { name: "子彈獅鷲", img: "images/Blade/子彈獅鷲.jpeg" },
+        { name: "鮫鯊狂鱗", img: "images/Blade/鮫鯊狂鱗.jpeg", isT0: true },
+        { name: "初號機勇氣 A", img: "images/Blade/初號機勇氣 A.jpeg" },
+        { name: "武士星劍", img: "images/Blade/武士星劍.jpeg" }
+      ],
+      ratchet: [
+        { name: "0-60", img: "images/Ratchet/0-60.jpeg" },
+        { name: "0-70", img: "images/Ratchet/0-70.jpeg" },
+        { name: "0-80", img: "images/Ratchet/0-80.jpeg" },
+        { name: "1-50", img: "images/Ratchet/1-50.jpeg" },
+        { name: "1-60", img: "images/Ratchet/1-60.jpeg" },
+        { name: "1-70", img: "images/Ratchet/1-70.jpeg" },
+        { name: "1-80", img: "images/Ratchet/1-80.jpeg" },
+        { name: "2-60", img: "images/Ratchet/2-60.jpeg" },
+        { name: "2-70", img: "images/Ratchet/2-70.jpeg" },
+        { name: "2-80", img: "images/Ratchet/2-80.jpeg" },
+        { name: "3-60", img: "images/Ratchet/3-60.jpeg" },
+        { name: "3-70", img: "images/Ratchet/3-70.jpeg" },
+        { name: "3-80", img: "images/Ratchet/3-80.jpeg" },
+        { name: "4-50", img: "images/Ratchet/4-50.jpeg" },
+        { name: "4-60", img: "images/Ratchet/4-60.jpeg" },
+        { name: "4-70", img: "images/Ratchet/4-70.jpeg" },
+        { name: "4-80", img: "images/Ratchet/4-80.jpeg" },
+        { name: "5-50", img: "images/Ratchet/5-50.jpeg" },
+        { name: "5-60", img: "images/Ratchet/5-60.jpeg" },
+        { name: "5-70", img: "images/Ratchet/5-70.jpeg" },
+        { name: "5-80", img: "images/Ratchet/5-80.jpeg" },
+        { name: "6-60", img: "images/Ratchet/6-60.jpeg" },
+        { name: "6-70", img: "images/Ratchet/6-70.jpeg" },
+        { name: "6-80", img: "images/Ratchet/6-80.jpeg" },
+        { name: "7-60", img: "images/Ratchet/7-60.jpeg" },
+        { name: "7-70", img: "images/Ratchet/7-70.jpeg" },
+        { name: "7-80", img: "images/Ratchet/7-80.jpeg" },
+        { name: "8-70", img: "images/Ratchet/8-70.jpeg" },
+        { name: "8-80", img: "images/Ratchet/8-80.jpeg" },
+        { name: "9-60", img: "images/Ratchet/9-60.jpeg" },
+        { name: "9-70", img: "images/Ratchet/9-70.jpeg" },
+        { name: "9-80", img: "images/Ratchet/9-80.jpeg" }
+      ],
+      bit: [
+        { name: "A 軸", img: "images/Bit/A.jpeg" },
+        { name: "B 軸", img: "images/Bit/B.jpeg" },
+        { name: "BS 軸", img: "images/Bit/BS.jpeg" },
+        { name: "C 軸", img: "images/Bit/C.jpeg" },
+        { name: "DB 軸", img: "images/Bit/DB.jpeg" },
+        { name: "DS 軸", img: "images/Bit/DS.jpeg" },
+        { name: "D 軸", img: "images/Bit/D.jpeg" },
+        { name: "E 軸", img: "images/Bit/E.jpeg" },
+        { name: "FB 軸", img: "images/Bit/FB.jpeg" },
+        { name: "FF 軸", img: "images/Bit/FF.jpeg" },
+        { name: "F 軸", img: "images/Bit/F.jpeg" },
+        { name: "G 軸", img: "images/Bit/G.jpeg" },
+        { name: "GB 軸", img: "images/Bit/GB.jpeg" },
+        { name: "GF 軸", img: "images/Bit/GF.jpeg" },
+        { name: "GR 軸", img: "images/Bit/GR.jpeg" },
+        { name: "GN 軸", img: "images/Bit/GN.jpeg" },
+        { name: "GP 軸", img: "images/Bit/GP.jpeg" },
+        { name: "GU 軸", img: "images/Bit/GU.jpeg" },
+        { name: "H 軸", img: "images/Bit/H.jpeg" },
+        { name: "HT 軸", img: "images/Bit/HT.jpeg" },
+        { name: "HN 軸", img: "images/Bit/HN.jpeg" },
+        { name: "I 軸", img: "images/Bit/I.jpeg" },
+        { name: "J 軸", img: "images/Bit/J.jpeg" },
+        { name: "K 軸", img: "images/Bit/K.jpeg" },
+        { name: "L 軸", img: "images/Bit/L.jpeg" },
+        { name: "LF 軸", img: "images/Bit/LF.jpeg" },
+        { name: "LO 軸", img: "images/Bit/LO.jpeg" },
+        { name: "LC 軸", img: "images/Bit/LC.jpeg" },
+        { name: "LR 軸", img: "images/Bit/LR.jpeg" },
+        { name: "M 軸", img: "images/Bit/M.jpeg" },
+        { name: "MN 軸", img: "images/Bit/MN.jpeg" },
+        { name: "N 軸", img: "images/Bit/N.jpeg" },
+        { name: "NR 軸", img: "images/Bit/NR.jpeg" },
+        { name: "O 軸", img: "images/Bit/O.jpeg" },
+        { name: "OP 軸", img: "images/Bit/OP.jpeg" },
+        { name: "P 軸", img: "images/Bit/P.jpeg" },
+        { name: "Q 軸", img: "images/Bit/Q.jpeg" },
+        { name: "RA 軸", img: "images/Bit/RA.jpeg" },
+        { name: "S 軸", img: "images/Bit/S.jpeg" },
+        { name: "T 軸", img: "images/Bit/T.jpeg" },
+        { name: "TK 軸", img: "images/Bit/TK.jpeg" },
+        { name: "TP 軸", img: "images/Bit/TP.jpeg" },
+        { name: "TR 軸", img: "images/Bit/TR.jpeg" },
+        { name: "U 軸", img: "images/Bit/U.jpeg" },
+        { name: "UF 軸", img: "images/Bit/UF.jpeg" },
+        { name: "UN 軸", img: "images/Bit/UN.jpeg" },
+        { name: "R 軸", img: "images/Bit/R.jpeg" },
+        { name: "V 軸", img: "images/Bit/V.jpeg" },
+        { name: "W 軸", img: "images/Bit/W.jpeg" },
+        { name: "WB 軸", img: "images/Bit/WB.jpeg" },
+        { name: "WW 軸", img: "images/Bit/WW.jpeg" },
+        { name: "Y 軸", img: "images/Bit/Y.jpeg" },
+        { name: "Z 軸", img: "images/Bit/Z.jpeg" }
+      ]
+    };
+
+    // 紀錄目前的組合選擇
+    const currentCombination = {
+      blade: null,
+      ratchet: null,
+      bit: null
+    };
+
+    // 狀態追蹤
+    const isDrawing = { blade: false, ratchet: false, bit: false };
+
+    function getRandomItem(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    // 獨立抽取單一零件
+    function drawSingle(partType) {
+      if (isDrawing[partType]) return;
+
+      isDrawing[partType] = true;
+      setButtonsState(partType, true);
+
+      const card = document.getElementById(`${partType}-card`);
+      card.classList.remove('t0-effect'); // 抽取前移除 T0 特效
+      card.classList.add('rolling');
+
+      let counter = 0;
+      const maxRolls = 15;
+      const intervalSpeed = 70;
+
+      const timer = setInterval(() => {
+        const tempItem = getRandomItem(partsData[partType]);
+        updateDisplay(partType, tempItem);
+        counter++;
+
+        if (counter >= maxRolls) {
+          clearInterval(timer);
+          const finalItem = getRandomItem(partsData[partType]);
+          updateDisplay(partType, finalItem);
+          currentCombination[partType] = finalItem.name;
+
+          card.classList.remove('rolling');
+
+          // 若抽到 T0 零件，觸發發光特效！
+          if (finalItem.isT0) {
+            card.classList.add('t0-effect');
+          }
+
+          isDrawing[partType] = false;
+          setButtonsState(partType, false);
+
+          checkFullComboSummary();
+        }
+      }, intervalSpeed);
+    }
+
+    // 一鍵全套抽取
+    function drawAll() {
+      drawSingle('blade');
+      drawSingle('ratchet');
+      drawSingle('bit');
+    }
+
+    function updateDisplay(partType, item) {
+      document.getElementById(`${partType}-name`).innerText = item.name;
+      const imgElem = document.getElementById(`${partType}-img`);
+      
+      imgElem.src = item.img;
+      imgElem.onerror = function() {
+        this.src = `https://via.placeholder.com/160?text=${encodeURIComponent(item.name)}`;
+      };
+    }
+
+    function setButtonsState(partType, disabled) {
+      document.getElementById(`${partType}-btn`).disabled = disabled;
+      // 若任一正在抽取，全抽按鈕禁用
+      const anyDrawing = Object.values(isDrawing).some(state => state === true);
+      document.getElementById('all-btn').disabled = anyDrawing;
+    }
+
+    // 檢查並顯示完整組合文字
+    function checkFullComboSummary() {
+      const { blade, ratchet, bit } = currentCombination;
+      if (blade && ratchet && bit) {
+        document.getElementById('result-text').innerText = 
+          `目前組合：${blade} ${ratchet} ${bit}`;
+      }
+    }
+  </script>
+</body>
+</html>
